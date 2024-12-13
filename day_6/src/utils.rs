@@ -99,14 +99,18 @@ pub fn calculate_movements(
     let mut direction = guard_initial_direction;
     let mut direction_value = directions.get(&direction).unwrap();
     let mut candidate_obstacles: Vec<(i128, i128)> = vec![];
+
+    let matrix_bounds = (matrix.len() - 1, matrix[0].len() - 1);
     candidate_obstacles = check_next_obstacles(
         &obstacles_positions,
         direction,
         position,
         candidate_obstacles,
+        matrix_bounds,
     );
     println!("Candidate obstacles: {:?}", candidate_obstacles);
 
+    check_if_guard_loop(position, obstacles_positions, candidate_obstacles);
     loop {
         let next_proposed_position = (
             position.0 as i128 + direction_value.0 as i128,
@@ -150,6 +154,7 @@ fn check_next_obstacles(
     next_direction: char,
     position: (i128, i128),
     candidate_obstacles: Vec<GuardCoords>,
+    matrix_bound: (usize, usize),
 ) -> Vec<GuardCoords> {
     println!(
         "Starting at: {:?}, we check for obstacles in the {} direction",
@@ -161,6 +166,7 @@ fn check_next_obstacles(
             position,
             next_direction,
             candidate_obstacles,
+            matrix_bound,
         );
     while is_an_obstacle {
         (
@@ -174,6 +180,7 @@ fn check_next_obstacles(
             new_position,
             new_direction,
             candidate_obstacles,
+            matrix_bound,
         );
     }
     return candidate_obstacles;
@@ -184,6 +191,7 @@ fn find_next_obstacles(
     position: GuardCoords,
     direction: Direction,
     mut candidate_obstacles: Vec<ObstacleCoords>,
+    matrix_bound: (usize, usize),
 ) -> (
     bool,
     ObstacleCoords,
@@ -208,6 +216,7 @@ fn find_next_obstacles(
         direction,
         obstacles_positions,
         candidate_obstacles,
+        matrix_bound,
     );
     let (is_obstacle, obstacle_coords, next_direction, new_position) =
         evaluate_next_obstacle(position, direction, obstacles_positions);
@@ -262,10 +271,10 @@ fn evaluate_next_obstacle(
             );
             let next_directions = init_next_direction();
             let next_direction = *next_directions.get(&direction).unwrap();
-            println!(
-                "find_next_obstacle: {:?} --{} obstacle at {:?}.           Changing direction to {}",
-                position_before_obstacle, direction, obstacle_position,next_direction
-            );
+            // println!(
+            //     "find_next_obstacle: {:?} --{} obstacle at {:?}.           Changing direction to {}",
+            //     position_before_obstacle, direction, obstacle_position,next_direction
+            // );
             return (
                 true,
                 obstacle_position,
@@ -282,6 +291,7 @@ fn evaluate_candidate_position_for_obstacle(
     direction: char,
     obstacles_positions: &Vec<(usize, usize)>,
     mut candidate_obstacles: Vec<ObstacleCoords>,
+    matrix_bound: (usize, usize),
 ) -> Vec<ObstacleCoords> {
     let directions_mapper = init_directions();
 
@@ -299,7 +309,7 @@ fn evaluate_candidate_position_for_obstacle(
     let direction_increment = (direction_increment.0 as i128, direction_increment.1 as i128);
 
     let mut candidate_coords = initial_guard_position;
-    while candidate_coords != obstacle_coords {
+    while is_safe(candidate_coords, matrix_bound) {
         candidate_coords.0 += direction_increment.0;
         candidate_coords.1 += direction_increment.1;
         let (is_obstacle, obstacle_2_coords, _, _) =
@@ -319,4 +329,58 @@ fn evaluate_candidate_position_for_obstacle(
         }
     }
     return candidate_obstacles;
+}
+
+fn check_if_guard_loop(
+    initial_position: GuardCoords,
+    obstacles: &Vec<(usize, usize)>,
+    candidate_obstacles: Vec<ObstacleCoords>,
+) {
+    let mut loops_count = 0;
+    for candidate_obstacle in candidate_obstacles {
+        let mut obstacles_visited: HashMap<ObstacleCoords, Vec<Direction>> = HashMap::new();
+
+        let candidate_obstacle = (candidate_obstacle.0 as usize, candidate_obstacle.1 as usize);
+        let mut all_obstacles = vec![candidate_obstacle];
+        all_obstacles.extend(obstacles.iter().cloned());
+
+        println!("checking if loop with obstacle at {:?}", candidate_obstacle);
+        println!("all obstacles: {:?}", all_obstacles);
+        let (mut is_obstacle, mut obstacle_coord, mut direction, mut updated_position) =
+            evaluate_next_obstacle(initial_position, '^', &all_obstacles);
+        while is_obstacle {
+            if obstacles_visited.contains_key(&obstacle_coord) {
+                if obstacles_visited
+                    .get(&obstacle_coord)
+                    .unwrap()
+                    .contains(&direction)
+                {
+                    loops_count += 1;
+                    println!("A loop was found!");
+                    break;
+                }
+            }
+            obstacles_visited
+                .entry(obstacle_coord)
+                .or_insert_with(Vec::new)
+                .push(direction);
+            println!(
+                "Guard at {:?} Obstacle at {:?}, dir {}",
+                updated_position, obstacle_coord, direction
+            );
+            (is_obstacle, obstacle_coord, direction, updated_position) =
+                evaluate_next_obstacle(updated_position, direction, &all_obstacles)
+        }
+    }
+    println!("Number of loops: {}", loops_count);
+}
+
+fn is_safe(coords: ObstacleCoords, matrix_bound: (usize, usize)) -> bool {
+    if coords.0 < 0 || coords.1 < 0 {
+        return false;
+    }
+    if coords.0 > matrix_bound.0 as i128 || coords.1 > matrix_bound.1 as i128 {
+        return false;
+    }
+    return true;
 }

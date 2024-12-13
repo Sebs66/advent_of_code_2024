@@ -3,7 +3,7 @@ use std::env::{self};
 use std::io::{BufReader, Cursor};
 use utils::{buf_reader_to_matrix, calculate_movements, file_to_buffer, find_special_symbols};
 fn main() {
-    let reader = file_to_buffer(String::from("example"));
+    let reader = file_to_buffer(String::from("input"));
     let result = part_1(reader);
     println!("{}", result);
     println!("\n\n\n\n");
