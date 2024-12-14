@@ -12,8 +12,9 @@ type Coords = (i32, i32);
 type ObstacleCoords = Coords;
 pub type GuardCoords = Coords;
 type DirectionCoords = Coords;
-type ObstaclesCoords = Vec<ObstacleCoords>;
+pub type ObstaclesCoords = Vec<ObstacleCoords>;
 
+#[derive(Clone, Copy, PartialEq)]
 pub enum Direction {
     North,
     South,
@@ -78,12 +79,12 @@ pub fn find_special_symbols(
     matrix: &Vec<Vec<char>>,
     symbols: Vec<char>,
 ) -> HashMap<char, Vec<(i32, i32)>> {
-    println!(
-        "Finding symbols {:?} in matrix of size: {}, {}",
-        symbols,
-        matrix[0].len(),
-        matrix.len()
-    );
+    // println!(
+    //     "Finding symbols {:?} in matrix of size: {}, {}",
+    //     symbols,
+    //     matrix[0].len(),
+    //     matrix.len()
+    // );
     let total_rows = matrix[0].len();
     let total_columns = matrix.len();
 
